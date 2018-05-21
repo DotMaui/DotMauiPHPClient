@@ -23,16 +23,24 @@ class Client
     /**
      *
      * @param type $apikey
+     * @throws \Exception
      */
     public function __construct($apikey)
     {
+
+        if (!function_exists('curl_version')) {
+            throw new \Exception("cURL must be enabled.");
+        }
+
         $this->apikey = $apikey;
+
     }
 
 
     /**
      *
      * @param type $url
+     * @return mixed
      */
     public function MinifyHTMLFromUrl($url)
     {
@@ -100,20 +108,77 @@ class Client
         return $this->makeRequest("jsmin", $this->data);
     }
 
+    /**
+     * @param $url
+     * @param $saveLocation
+     * @param int $delay
+     * @param bool $fullpage
+     * @param string $viewport
+     * @return bool
+     * @throws \Exception
+     */
+    public function saveScreenshotFromUrl($url, $saveLocation, $delay = 0, $fullpage = false, $viewport = "1440x900")
+    {
+
+        if (empty($url))
+        {
+            throw new \Exception("Url required");
+        }
+
+        $params = sprintf("url=%s&delay=%u&fullpage=%s&viewport=%s", urlencode($url), $delay, ($fullpage ? "true" : "false"), $viewport);
+
+        $this->data_request = sprintf("&apikey=%s&%s", $this->apikey, $params);
+        $this->url_request  = sprintf("%s%s/%s/", $this->ENDPOINT, $this->CLIENT_VERSION, "capture");
+        $this->result = true;
+
+        $this->ch = curl_init();
+        curl_setopt($this->ch, CURLOPT_URL, $this->url_request);
+        curl_setopt($this->ch, CURLOPT_CUSTOMREQUEST, "POST");
+        curl_setopt($this->ch, CURLOPT_POSTFIELDS, $this->data_request);
+        curl_setopt($this->ch, CURLOPT_ENCODING, "UTF-8");
+        curl_setopt($this->ch, CURLOPT_HTTPHEADER, array('Content-Type: application/x-www-form-urlencoded'));
+        curl_setopt($this->ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($this->ch, CURLOPT_SSL_VERIFYHOST, 0);
+        curl_setopt($this->ch, CURLOPT_SSL_VERIFYPEER, 0);
+
+        $this->responseFromServer = curl_exec($this->ch);
+        $this->response = curl_getinfo($this->ch, CURLINFO_HTTP_CODE);
+
+        curl_close($this->ch);
+
+        if ($this->response != 200)
+        {
+            throw new \Exception($this->responseFromServer);
+        }
+
+        $fp = fopen($saveLocation, "w");
+
+        if (!$fp)
+        {
+            $this->result = false;
+            throw new \Exception('File open failed.');
+        }
+
+        fwrite($fp, $this->responseFromServer);
+        fclose($fp);
+
+        return $this->result;
+    }
 
     /**
      *
      * @param \DotMaui\ImgResizerRequest $req
      * @param type $saveLocation
-     * @throws Exception
+     * @return bool
+     * @throws \Exception
      */
     public function saveImgResizedFromUrl($req, $saveLocation)
     {
         $this->data_img = sprintf("url=%s", urlencode($req->Url));
 
-        if ($req->Url === NULL)
+        if (empty($req->Url))
         {
-            throw new Exception("Url required");
+            throw new \Exception("Url required");
         }
 
         if ($req->Width == 0 && $req->Height == 0)
@@ -152,7 +217,7 @@ class Client
 
         if ($this->response != 200)
         {
-            throw new \Exception($this->response);
+            throw new \Exception($this->responseFromServer);
         }
 
 
@@ -167,6 +232,7 @@ class Client
         fclose($fp);
 
         return $this->result;
+
     }
 
 
@@ -174,6 +240,8 @@ class Client
      *
      * @param type $action
      * @param type $postData
+     * @return mixed
+     * @throws \Exception
      */
     private function makeRequest($action, $postData)
     {
@@ -197,7 +265,7 @@ class Client
 
         if ($this->response != 200)
         {
-            throw new \Exception($this->response);
+            throw new \Exception($this->responseFromServer);
         }
 
         return $this->responseFromServer;

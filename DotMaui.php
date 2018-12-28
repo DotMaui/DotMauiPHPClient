@@ -2,6 +2,9 @@
 
 namespace DotMaui;
 
+require_once "Models/ImgResizerRequest.php";
+require_once "Models/Paste.php";
+
 /**
  *
  */
@@ -22,7 +25,7 @@ class Client
 
     /**
      *
-     * @param type $apikey
+     * @param string $apikey
      * @throws \Exception
      */
     public function __construct($apikey)
@@ -39,7 +42,7 @@ class Client
 
     /**
      *
-     * @param type $url
+     * @param string $url
      * @return mixed
      */
     public function MinifyHTMLFromUrl($url)
@@ -51,8 +54,8 @@ class Client
 
     /**
      *
-     * @param type $html
-     * @return type
+     * @param string $html
+     * @return string
      */
     public function MinifyHTMLFromString($html)
     {
@@ -63,8 +66,8 @@ class Client
 
     /**
      *
-     * @param type $url
-     * @return type
+     * @param string $url
+     * @return string
      */
     public function MinifyCSSFromUrl($url)
     {
@@ -75,8 +78,8 @@ class Client
 
     /**
      *
-     * @param type $html
-     * @return type
+     * @param string $html
+     * @return string
      */
     public function MinifyCSSFromString($html)
     {
@@ -87,8 +90,8 @@ class Client
 
     /**
      *
-     * @param type $url
-     * @return type
+     * @param string $url
+     * @return string
      */
     public function MinifyJSFromUrl($url)
     {
@@ -99,8 +102,8 @@ class Client
 
     /**
      *
-     * @param type $html
-     * @return type
+     * @param string $html
+     * @return string
      */
     public function MinifyJSFromString($html)
     {
@@ -168,7 +171,7 @@ class Client
     /**
      *
      * @param \DotMaui\ImgResizerRequest $req
-     * @param type $saveLocation
+     * @param string $saveLocation
      * @return bool
      * @throws \Exception
      */
@@ -183,7 +186,7 @@ class Client
 
         if ($req->Width == 0 && $req->Height == 0)
         {
-            throw new Exception("Height or width required");
+            throw new \Exception("Height or width required");
         }
 
         if ($req->Width != 0)
@@ -235,11 +238,54 @@ class Client
 
     }
 
+    public function ListingPastes($offset = 0, $limit = 500, $beauty = false)
+    {
+        $beauty_param = ($beauty) ? "true" : "false";
+        $this->data = sprintf("cmd=ls&limit=%d,%d&beauty=%s", $offset, $limit, $beauty_param);
+        return $this->makeRequest("pastebin", $this->data);
+    }
+
+    /**
+     * @param Paste $paste
+     * @return string
+     */
+    public function CreatePaste($paste)
+    {
+
+        $data_string = "text=%s&title=%s&language=%s&theme=%s&exposure=%s&author=%s&expiration=%s";
+        $this->data = sprintf($data_string, $paste->Text, $paste->Title, $paste->Language, $paste->Theme, $paste->Exposure, $paste->Author, $paste->Expiration);
+        return $this->makeRequest("pastebin/new", $this->data);
+
+    }
+
+    /**
+     * @param string $uid
+     * @return string
+     */
+    public function DeletePaste($uid)
+    {
+
+        $this->data = sprintf("uid=%s", $uid);
+        return $this->makeRequest("pastebin/del", $this->data);
+
+    }
+
+    /**
+     * @param string $uid
+     * @return string
+     */
+    public function GetCompletePaste($uid) {
+
+        $this->data = sprintf("uid=%s", $uid);
+        return $this->makeRequest("pastebin/get", $this->data);
+
+    }
+
 
     /**
      *
-     * @param type $action
-     * @param type $postData
+     * @param string $action
+     * @param string $postData
      * @return mixed
      * @throws \Exception
      */
